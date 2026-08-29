@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: trivy-scan
+  namespace: ci
+spec:
+  params:
+    - name: image
+      type: string
+    - name: digest
+      type: string
+  workspaces:
+    - name: registry-auth
+      readOnly: true
+  steps:
+    - name: scan
+      image: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+      command: [trivy]
+      args:
+        - image
+        - --insecure
+        - --exit-code=1
+        - --ignore-unfixed
+        - --severity=HIGH,CRITICAL
+        - $(params.image)@$(params.digest)
+      env:
+        - name: DOCKER_CONFIG
+          value: $(workspaces.registry-auth.path)
+        - name: TRIVY_CACHE_DIR
+          value: /tmp/trivy-cache
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault

@@ -1,0 +1,88 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitea-push
+  namespace: ci
+spec:
+  params:
+    - name: repo-url
+      value: http://gitea-http.gitea.svc.cluster.local:3000/platform/sample-app.git
+    - name: revision
+      value: $(body.after)
+    - name: image-tag
+      value: $(body.after)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: sample-app
+  namespace: ci
+spec:
+  params:
+    - name: repo-url
+    - name: revision
+    - name: image-tag
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: sample-app-
+        namespace: ci
+      spec:
+        pipelineRef:
+          name: sample-app
+        taskRunTemplate:
+          serviceAccountName: build-bot
+        params:
+          - name: repo-url
+            value: $(tt.params.repo-url)
+          - name: revision
+            value: $(tt.params.revision)
+          - name: image-tag
+            value: $(tt.params.image-tag)
+        workspaces:
+          - name: source
+            volumeClaimTemplate:
+              spec:
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 5Gi
+          - name: git-auth
+            secret:
+              secretName: gitea-git-auth
+          - name: registry-auth
+            secret:
+              secretName: harbor-registry-auth
+              items:
+                - key: .dockerconfigjson
+                  path: config.json
+          - name: cosign-key
+            secret:
+              secretName: cosign-signing-key
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: sample-app
+  namespace: ci
+spec:
+  serviceAccountName: triggers-bot
+  triggers:
+    - name: main-push
+      interceptors:
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: >-
+                has(body.repository) &&
+                body.repository.full_name == 'platform/sample-app' &&
+                body.ref == 'refs/heads/main' &&
+                body.after.matches('^[a-f0-9]{40}$') &&
+                has(body.head_commit) &&
+                !body.head_commit.message.startsWith('chore(deploy):')
+      bindings:
+        - ref: gitea-push
+      template:
+        ref: sample-app

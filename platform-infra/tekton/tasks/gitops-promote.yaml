@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: gitops-promote
+  namespace: ci
+spec:
+  params:
+    - name: digest
+      type: string
+    - name: branch
+      type: string
+      default: main
+    - name: manifest
+      type: string
+      default: sample-app/deploy/base/kustomization.yaml
+  workspaces:
+    - name: source
+    - name: git-auth
+      readOnly: true
+  steps:
+    - name: update-and-push
+      image: alpine/git:2.52.0@sha256:4a0e72d49596a1f5d3701aeedafdadc5c0da4062be4657c7bdc4017387f591cc
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: HOME
+          value: /tekton/home
+        - name: IMAGE_DIGEST
+          value: $(params.digest)
+      script: |
+        #!/bin/sh
+        set -eu
+        cp "$(workspaces.git-auth.path)/.git-credentials" /tekton/home/.git-credentials
+        chmod 0600 /tekton/home/.git-credentials
+        git config --global credential.helper "store --file=/tekton/home/.git-credentials"
+        git config --global user.name "pantanal-build-grid"
+        git config --global user.email "build-grid@local.invalid"
+        sed -i "s|digest: sha256:[a-f0-9]*|digest: ${IMAGE_DIGEST}|" "$(params.manifest)"
+        git add "$(params.manifest)"
+        if git diff --cached --quiet; then
+          exit 0
+        fi
+        git commit -m "chore(deploy): promote ${IMAGE_DIGEST} [skip ci]"
+        git push origin "HEAD:$(params.branch)"

@@ -1,0 +1,111 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: sample-app
+  namespace: ci
+spec:
+  params:
+    - name: repo-url
+      type: string
+      default: http://gitea-http.gitea.svc.cluster.local:3000/platform/sample-app.git
+    - name: revision
+      type: string
+      default: main
+    - name: image-tag
+      type: string
+    - name: image-internal
+      type: string
+      default: harbor.harbor.svc.cluster.local/library/sample-app
+    - name: image-public
+      type: string
+      default: harbor.localhost:30003/library/sample-app
+  workspaces:
+    - name: source
+    - name: git-auth
+    - name: registry-auth
+    - name: cosign-key
+  tasks:
+    - name: clone
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: source
+          workspace: source
+        - name: git-auth
+          workspace: git-auth
+    - name: build-and-push
+      runAfter: [clone]
+      taskRef:
+        name: nix-build-push
+      params:
+        - name: image-internal
+          value: $(params.image-internal)
+        - name: image-public
+          value: $(params.image-public)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: source
+        - name: registry-auth
+          workspace: registry-auth
+    - name: scan
+      runAfter: [build-and-push]
+      taskRef:
+        name: trivy-scan
+      params:
+        - name: image
+          value: $(params.image-internal)
+        - name: digest
+          value: $(tasks.build-and-push.results.image-digest)
+      workspaces:
+        - name: registry-auth
+          workspace: registry-auth
+    - name: sign
+      runAfter: [scan]
+      taskRef:
+        name: cosign-sign
+      params:
+        - name: image
+          value: $(params.image-internal)
+        - name: digest
+          value: $(tasks.build-and-push.results.image-digest)
+      workspaces:
+        - name: registry-auth
+          workspace: registry-auth
+        - name: cosign-key
+          workspace: cosign-key
+    - name: verify-signature
+      runAfter: [sign]
+      taskRef:
+        name: cosign-verify
+      params:
+        - name: image
+          value: $(params.image-internal)
+        - name: digest
+          value: $(tasks.build-and-push.results.image-digest)
+      workspaces:
+        - name: registry-auth
+          workspace: registry-auth
+        - name: cosign-key
+          workspace: cosign-key
+    - name: promote
+      runAfter: [verify-signature]
+      taskRef:
+        name: gitops-promote
+      params:
+        - name: digest
+          value: $(tasks.build-and-push.results.image-digest)
+      workspaces:
+        - name: source
+          workspace: source
+        - name: git-auth
+          workspace: git-auth
+  results:
+    - name: image-reference
+      value: $(tasks.build-and-push.results.image-reference)

@@ -1,0 +1,12 @@
+.direnv/
+.env
+.env.local
+coverage.out
+coverage.html
+reports/
+result
+result-*
+*.log
+platform-infra/.generated/
+platform-infra/secrets/
+.pantanal-smoke-state/

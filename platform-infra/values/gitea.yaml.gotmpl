@@ -1,0 +1,38 @@
+replicaCount: 1
+persistence:
+  enabled: false
+service:
+  http:
+    type: NodePort
+    port: 3000
+    nodePort: 30000
+  ssh:
+    type: NodePort
+    port: 22
+    nodePort: 30022
+gitea:
+  admin:
+    username: platform
+    password: {{ requiredEnv "GITEA_ADMIN_PASSWORD" | quote }}
+    email: platform@local.invalid
+  config:
+    server:
+      ROOT_URL: http://gitea.localhost:30000/
+    database:
+      DB_TYPE: sqlite3
+    session:
+      PROVIDER: memory
+    cache:
+      ADAPTER: memory
+    queue:
+      TYPE: level
+postgresql:
+  enabled: false
+postgresql-ha:
+  enabled: false
+redis-cluster:
+  enabled: false
+valkey:
+  enabled: false
+valkey-cluster:
+  enabled: false

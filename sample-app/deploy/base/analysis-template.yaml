@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: sample-app-success-rate
+  namespace: sample-app
+spec:
+  args:
+    - name: namespace
+      value: sample-app
+    - name: service-name
+      value: sample-app
+  metrics:
+    - name: http-success-rate
+      interval: 30s
+      count: 3
+      failureLimit: 1
+      successCondition: len(result) == 1 && result[0] >= 0.99
+      provider:
+        prometheus:
+          address: http://prometheus-server.observability.svc.cluster.local
+          query: |
+            sum(rate(http_requests_total{
+              namespace="{{args.namespace}}",
+              service="{{args.service-name}}",
+              code!~"5.."
+            }[2m]))
+            /
+            sum(rate(http_requests_total{
+              namespace="{{args.namespace}}",
+              service="{{args.service-name}}"
+            }[2m]))

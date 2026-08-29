@@ -1,0 +1,29 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: pantanal
+  title: Pantanal CI/CD Control Plane
+  description: Hermetic, signed, policy-gated GitOps delivery reference platform.
+  annotations:
+    github.com/project-slug: cchostak/pantanal
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - gitops
+    - kubernetes
+    - platform-engineering
+    - supply-chain-security
+  links:
+    - url: https://github.com/cchostak/pantanal
+      title: Source repository
+      icon: github
+    - url: https://github.com/cchostak/pantanal/actions
+      title: Continuous integration
+      icon: dashboard
+    - url: https://github.com/cchostak/pantanal/security
+      title: Security posture
+      icon: security
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:cchostak
+  system: pantanal-delivery-platform

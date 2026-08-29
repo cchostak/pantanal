@@ -1,0 +1,17 @@
+externalURL: http://harbor.localhost:30003
+harborAdminPassword: {{ requiredEnv "HARBOR_ADMIN_PASSWORD" | quote }}
+expose:
+  type: nodePort
+  tls:
+    enabled: false
+  nodePort:
+    ports:
+      http:
+        port: 80
+        nodePort: 30003
+persistence:
+  enabled: false
+trivy:
+  enabled: false
+notary:
+  enabled: false

@@ -1,0 +1,15 @@
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30080
+  extraArgs:
+    - --insecure
+configs:
+  params:
+    server.insecure: true
+applicationSet:
+  enabled: false
+notifications:
+  enabled: false
+dex:
+  enabled: false

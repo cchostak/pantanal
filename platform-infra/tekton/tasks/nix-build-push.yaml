@@ -1,0 +1,55 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: nix-build-push
+  namespace: ci
+spec:
+  params:
+    - name: context
+      type: string
+      default: sample-app
+    - name: image-internal
+      type: string
+    - name: image-public
+      type: string
+    - name: image-tag
+      type: string
+  workspaces:
+    - name: source
+    - name: registry-auth
+      readOnly: true
+  results:
+    - name: image-digest
+      description: Registry digest of the published image.
+    - name: image-reference
+      description: Public immutable image reference for GitOps.
+  stepTemplate:
+    securityContext:
+      runAsNonRoot: false
+  steps:
+    - name: nix-build
+      image: nixos/nix:2.31.2@sha256:29fc5fe207f159ceb0143c25c19c774062fee02ce5eda118f3067547b3054894
+      workingDir: $(workspaces.source.path)/$(params.context)
+      env:
+        - name: NIX_CONFIG
+          value: |
+            experimental-features = nix-command flakes
+            sandbox = false
+      script: |
+        #!/bin/sh
+        set -eu
+        nix build --no-update-lock-file .#container --out-link image-result
+        cp -L image-result "$(workspaces.source.path)/image.tar"
+    - name: push
+      image: gcr.io/go-containerregistry/crane:v0.22.0@sha256:2b6828477d3cdf9999e84515f4e2019c7e6550e4d7fe9b5b37542bd25c9bc201
+      env:
+        - name: DOCKER_CONFIG
+          value: $(workspaces.registry-auth.path)
+      script: |
+        #!/busybox/sh
+        set -eu
+        crane push --insecure "$(workspaces.source.path)/image.tar" \
+          "$(params.image-internal):$(params.image-tag)"
+        digest="$(crane digest --insecure "$(params.image-internal):$(params.image-tag)")"
+        printf '%s' "$digest" > "$(results.image-digest.path)"
+        printf '%s@%s' "$(params.image-public)" "$digest" > "$(results.image-reference.path)"

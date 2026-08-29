@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-clone
+  namespace: ci
+spec:
+  params:
+    - name: url
+      type: string
+    - name: revision
+      type: string
+      default: main
+  workspaces:
+    - name: source
+    - name: git-auth
+      readOnly: true
+  results:
+    - name: commit
+      description: Checked-out Git commit.
+  steps:
+    - name: clone
+      image: alpine/git:2.52.0@sha256:4a0e72d49596a1f5d3701aeedafdadc5c0da4062be4657c7bdc4017387f591cc
+      env:
+        - name: HOME
+          value: /tekton/home
+      script: |
+        #!/bin/sh
+        set -eu
+        cp "$(workspaces.git-auth.path)/.git-credentials" /tekton/home/.git-credentials
+        chmod 0600 /tekton/home/.git-credentials
+        git config --global credential.helper "store --file=/tekton/home/.git-credentials"
+        git config --global safe.directory "$(workspaces.source.path)"
+        find "$(workspaces.source.path)" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+        git -C "$(workspaces.source.path)" init
+        git -C "$(workspaces.source.path)" remote add origin "$(params.url)"
+        git -C "$(workspaces.source.path)" fetch --depth 1 origin "$(params.revision)"
+        git -C "$(workspaces.source.path)" checkout --detach FETCH_HEAD
+        git -C "$(workspaces.source.path)" rev-parse HEAD | tr -d '\n' > "$(results.commit.path)"

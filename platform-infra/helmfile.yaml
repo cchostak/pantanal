@@ -1,0 +1,65 @@
+repositories:
+  - name: gitea-charts
+    url: https://dl.gitea.com/charts/
+  - name: harbor
+    url: https://helm.goharbor.io
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: kyverno
+    url: https://kyverno.github.io/kyverno/
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+  timeout: 1200
+
+releases:
+  - name: gitea
+    namespace: gitea
+    createNamespace: true
+    chart: gitea-charts/gitea
+    version: 11.0.0
+    values:
+      - values/gitea.yaml.gotmpl
+
+  - name: harbor
+    namespace: harbor
+    createNamespace: true
+    chart: harbor/harbor
+    version: 1.16.2
+    values:
+      - values/harbor.yaml.gotmpl
+
+  - name: argocd
+    namespace: argocd
+    createNamespace: true
+    chart: argo/argo-cd
+    version: 7.8.13
+    values:
+      - values/argocd.yaml
+
+  - name: argo-rollouts
+    namespace: argo-rollouts
+    createNamespace: true
+    chart: argo/argo-rollouts
+    version: 2.38.2
+    values:
+      - values/argo-rollouts.yaml
+
+  - name: prometheus
+    namespace: observability
+    createNamespace: true
+    chart: prometheus-community/prometheus
+    version: 27.3.1
+    values:
+      - values/prometheus.yaml
+
+  - name: kyverno
+    namespace: kyverno
+    createNamespace: true
+    chart: kyverno/kyverno
+    version: '{{ requiredEnv "KYVERNO_CHART_VERSION" }}'
+    values:
+      - values/kyverno.yaml

@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cosign-sign
+  namespace: ci
+spec:
+  params:
+    - name: image
+      type: string
+    - name: digest
+      type: string
+  workspaces:
+    - name: registry-auth
+      readOnly: true
+    - name: cosign-key
+      readOnly: true
+  steps:
+    - name: sign
+      image: ghcr.io/sigstore/cosign/cosign:v3.1.3@sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+      command: ["cosign"]
+      args:
+        - sign
+        - --yes
+        - --allow-insecure-registry
+        - --key
+        - $(workspaces.cosign-key.path)/cosign.key
+        - $(params.image)@$(params.digest)
+      env:
+        - name: DOCKER_CONFIG
+          value: $(workspaces.registry-auth.path)
+        - name: COSIGN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cosign-signing-key
+              key: password
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault

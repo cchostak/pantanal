@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: sample-app
+  namespace: argocd
+spec:
+  description: Least-privilege delivery boundary for the Pantanal sample service.
+  sourceRepos:
+    - http://gitea-http.gitea.svc.cluster.local:3000/platform/sample-app.git
+  destinations:
+    - namespace: sample-app
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

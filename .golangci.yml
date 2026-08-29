@@ -1,0 +1,24 @@
+version: "2"
+run:
+  timeout: 5m
+  relative-path-mode: gomod
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - staticcheck
+    - unconvert
+    - unused
+formatters:
+  enable:
+    - gofmt
+    - goimports
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
