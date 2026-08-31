@@ -20,7 +20,7 @@ releases:
     namespace: gitea
     createNamespace: true
     chart: gitea-charts/gitea
-    version: 11.0.0
+    version: 12.7.0
     values:
       - values/gitea.yaml.gotmpl
 

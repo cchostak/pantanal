@@ -39,9 +39,9 @@ spec:
         #!/bin/sh
         set -eu
         nix build --no-update-lock-file .#container --out-link image-result
-        cp -L image-result "$(workspaces.source.path)/image.tar"
+        gzip -dc image-result >"$(workspaces.source.path)/image.tar"
     - name: push
-      image: gcr.io/go-containerregistry/crane:v0.22.0@sha256:2b6828477d3cdf9999e84515f4e2019c7e6550e4d7fe9b5b37542bd25c9bc201
+      image: gcr.io/go-containerregistry/crane/debug:v0.22.0@sha256:fcf134969f70b86febd0ec78528e3a9f2a8e6b59a110b44694dc6fa2c553e4a1
       env:
         - name: DOCKER_CONFIG
           value: $(workspaces.registry-auth.path)

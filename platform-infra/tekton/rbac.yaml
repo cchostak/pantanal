@@ -26,6 +26,14 @@ metadata:
   name: triggers-pipelinerun-creator
   namespace: ci
 rules:
+  - apiGroups: ["triggers.tekton.dev"]
+    resources:
+      - eventlisteners
+      - interceptors
+      - triggerbindings
+      - triggertemplates
+      - triggers
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["tekton.dev"]
     resources: ["pipelineruns"]
     verbs: ["create"]
@@ -33,6 +41,9 @@ rules:
     resources: ["serviceaccounts"]
     resourceNames: ["build-bot"]
     verbs: ["impersonate"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -47,3 +58,25 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: triggers-pipelinerun-creator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pantanal-trigger-metadata-reader
+rules:
+  - apiGroups: ["triggers.tekton.dev"]
+    resources: ["clusterinterceptors", "clustertriggerbindings"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pantanal-trigger-metadata-reader
+subjects:
+  - kind: ServiceAccount
+    name: triggers-bot
+    namespace: ci
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pantanal-trigger-metadata-reader

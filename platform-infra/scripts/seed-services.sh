@@ -103,6 +103,21 @@ if [[ "${robot_status}" != "201" && "${robot_status}" != "409" ]]; then
   exit 1
 fi
 
+robot_id="$(curl --fail --silent --user "admin:${HARBOR_ADMIN_PASSWORD}" \
+  http://harbor.localhost:30003/api/v2.0/robots |
+  jq --arg name "${HARBOR_ROBOT_NAME}" -er \
+    '[.[] | select(.name == $name) | .id][0]')"
+robot_secret_status="$(jq --null-input --arg secret "${HARBOR_ROBOT_SECRET}" \
+  '{secret: $secret}' |
+  curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --request PATCH --user "admin:${HARBOR_ADMIN_PASSWORD}" \
+    --header 'Content-Type: application/json' --data-binary @- \
+    "http://harbor.localhost:30003/api/v2.0/robots/${robot_id}")"
+if [[ "${robot_secret_status}" != "200" ]]; then
+  echo "failed to synchronize Harbor robot secret: HTTP ${robot_secret_status}" >&2
+  exit 1
+fi
+
 kubectl apply -f "${REPO_DIR}/sample-app/deploy/argocd/project.yaml"
 kubectl apply -f "${REPO_DIR}/sample-app/deploy/argocd/application.yaml"
 

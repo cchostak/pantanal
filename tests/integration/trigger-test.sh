@@ -12,9 +12,20 @@ for _ in $(seq 1 120); do
     revision="$(kubectl --namespace ci get pipelinerun "${run_name}" \
       --output=jsonpath='{.spec.params[?(@.name=="revision")].value}')"
     if [[ "${revision}" == "${expected_revision}" ]]; then
-      kubectl --namespace ci wait --for=condition=Succeeded --timeout=20m "pipelinerun/${run_name}"
-      echo "Gitea payload reached PipelineRun ${run_name} at ${revision}"
-      exit 0
+      status="$(kubectl --namespace ci get pipelinerun "${run_name}" \
+        --output=jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}')"
+      case "${status}" in
+        True)
+          echo "Gitea payload reached PipelineRun ${run_name} at ${revision}"
+          exit 0
+          ;;
+        False)
+          reason="$(kubectl --namespace ci get pipelinerun "${run_name}" \
+            --output=jsonpath='{.status.conditions[?(@.type=="Succeeded")].message}')"
+          echo "PipelineRun ${run_name} failed: ${reason}" >&2
+          exit 1
+          ;;
+      esac
     fi
   fi
   sleep 5

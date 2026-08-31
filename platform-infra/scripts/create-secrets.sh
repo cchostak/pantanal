@@ -20,7 +20,8 @@ apply_secret ci generic gitea-git-auth \
 registry_auth="$(printf '%s:%s' "${HARBOR_ROBOT_NAME}" "${HARBOR_ROBOT_SECRET}" | base64 | tr -d '\n')"
 jq --null-input --arg auth "${registry_auth}" '{auths: {
   "harbor.harbor.svc.cluster.local": {auth: $auth},
-  "harbor.localhost:30003": {auth: $auth}
+  "harbor.localhost:30003": {auth: $auth},
+  "pantanal-control-plane:30003": {auth: $auth}
 }}' >"${SECRETS_DIR}/docker-config.json"
 
 apply_secret ci generic harbor-registry-auth \

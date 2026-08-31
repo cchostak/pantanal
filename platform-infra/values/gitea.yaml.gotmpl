@@ -26,6 +26,8 @@ gitea:
       ADAPTER: memory
     queue:
       TYPE: level
+    webhook:
+      ALLOWED_HOST_LIST: el-sample-app.ci.svc.cluster.local
 postgresql:
   enabled: false
 postgresql-ha:

@@ -73,6 +73,8 @@ spec:
       interceptors:
         - ref:
             name: cel
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev/v1alpha1
           params:
             - name: filter
               value: >-
